@@ -34,20 +34,14 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-3xl shadow-xl">
         {/* Logo */}
-        <div className="flex justify-center">
-          <svg width="72" height="72" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#22c55e" />
-                <stop offset="100%" stopColor="#15803d" />
-              </linearGradient>
-            </defs>
-            <circle cx="28" cy="22" r="14" fill="url(#logoGradient)" />
-            <path
-              d="M46 20 L74 20 C78 20 80 24 77 27 L36 76 C33 79 28 77 29 73 L38 44 L14 44 C10 44 8 40 11 37 L46 20 Z"
-              fill="url(#logoGradient)"
-            />
-          </svg>
+        <div className="flex justify-center mb-2">
+          {/* Replace with your company logo */}
+
+          <img
+            src="/logo.jpg"
+            alt="Logo"
+            className="w-24 h-24 object-contain"
+          />
         </div>
 
         <div>
