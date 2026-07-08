@@ -72,7 +72,7 @@ const MainLayout = () => {
 
           <div className="border-t border-gray-200 px-4 py-4">
             <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
                   <span className="text-indigo-600 font-medium">
                     {user?.first_name?.charAt(0) || 'U'}
