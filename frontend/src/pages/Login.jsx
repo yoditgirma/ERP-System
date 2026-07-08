@@ -1,3 +1,4 @@
+// frontend/src/pages/Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -30,55 +31,78 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            ERP System
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in to your account
-          </p>
+    <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-3xl shadow-xl">
+        {/* Logo */}
+        <div className="flex justify-center">
+          <svg width="72" height="72" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#22c55e" />
+                <stop offset="100%" stopColor="#15803d" />
+              </linearGradient>
+            </defs>
+            <circle cx="28" cy="22" r="14" fill="url(#logoGradient)" />
+            <path
+              d="M46 20 L74 20 C78 20 80 24 77 27 L36 76 C33 79 28 77 29 73 L38 44 L14 44 C10 44 8 40 11 37 L46 20 Z"
+              fill="url(#logoGradient)"
+            />
+          </svg>
         </div>
+
+        <div>
+          <h2 className="text-center text-3xl font-bold text-gray-900">
+            Welcome Back!
+          </h2>
+        </div>
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <div className="rounded-md shadow-sm -space-y-px">
+          <div className="space-y-5">
             <div>
-              <label htmlFor="username" className="sr-only">
-                Username
+              <label className="block text-base text-gray-500 mb-2">
+                Username*
               </label>
               <input
-                id="username"
                 type="text"
                 {...register('username', { required: 'Username is required' })}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Username"
+                className={`w-full px-4 py-3 border ${
+                  errors.username ? 'border-red-500' : 'border-gray-300'
+                } rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors`}
+                placeholder=""
               />
               {errors.username && (
-                <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.username.message}</p>
               )}
             </div>
-            <div className="relative">
-              <label htmlFor="password" className="sr-only">
-                Password
+
+            <div>
+              <label className="block text-base text-gray-500 mb-2">
+                Password*
               </label>
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                {...register('password', { required: 'Password is required' })}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              >
-                {showPassword ? (
-                  <EyeSlashIcon className="h-5 w-5 text-gray-400" />
-                ) : (
-                  <EyeIcon className="h-5 w-5 text-gray-400" />
-                )}
-              </button>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  {...register('password', { required: 'Password is required' })}
+                  className={`w-full px-4 py-3 border ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  } rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors`}
+                  placeholder=""
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+              )}
             </div>
           </div>
 
@@ -87,33 +111,31 @@ const Login = () => {
               <input
                 id="remember-me"
                 type="checkbox"
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                className="h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded"
               />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
                 Remember me
               </label>
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500">
+              <a href="#" className="font-bold text-gray-900 hover:text-gray-700">
                 Forgot your password?
               </a>
             </div>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
-                loading
-                  ? 'bg-indigo-400 cursor-not-allowed'
-                  : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
-              }`}
-            >
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full flex justify-center py-4 px-4 rounded-xl text-base font-bold tracking-wide text-white transition-colors ${
+              loading
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-linear-to-r from-green-500 to-slate-900 hover:from-green-600 hover:to-slate-950'
+            }`}
+          >
+            {loading ? 'Logging in...' : 'LOG IN'}
+          </button>
         </form>
       </div>
     </div>
