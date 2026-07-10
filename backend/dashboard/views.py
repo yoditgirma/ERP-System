@@ -7,20 +7,19 @@ from datetime import timedelta
 from accounts.models import User, UserRole, LoginHistory
 
 class DashboardStatsView(APIView):
-    """API endpoint for dashboard statistics"""
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
         # Get total users count
         total_users = User.objects.count()
         
-        # Get active users (logged in within last 24 hours)
+        # Get active users - logged in within 24 hrs
         yesterday = timezone.now() - timedelta(days=1)
         active_users = LoginHistory.objects.filter(
             login_time__gte=yesterday
         ).values('user').distinct().count()
         
-        # Get recent activity (last 5 logins)
+        # Get recent activity - last 5 logins
         recent_activity = LoginHistory.objects.select_related('user').order_by('-login_time')[:5]
         
         # Count users by role
@@ -28,7 +27,7 @@ class DashboardStatsView(APIView):
             count=Count('user')
         )
         
-        # System status (you can add more logic here)
+        # System status
         system_status = "Online"
         
         # Format recent activity
