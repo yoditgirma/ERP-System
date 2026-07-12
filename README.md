@@ -1,6 +1,7 @@
-<<<<<<< HEAD
 # ERP System
-=======
-# ZenERP-New
-This is for new ZenERP-Project: Developers can intract with repository and share thier workflow and documents.
->>>>>>> source/main
+
+This repository contains the ERP System project.
+
+## ZenERP-New
+
+This repository is for the new ZenERP project. Developers can interact with the repository and share their workflow and documentation.
