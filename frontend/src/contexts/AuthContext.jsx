@@ -109,18 +109,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   const value = {
-    user,
-    loading,
-    error,
-    login,
-    register,
-    logout,
-    updateProfile,
-    changePassword,
-    isAuthenticated: !!user,
-    isSuperAdmin: user?.roles?.includes('Super Administrator') || false,
-    isAdmin: user?.roles?.includes('Administrator') || false,
-  };
+  user,
+  loading,
+  error,
+  login,
+  logout,
+  isAuthenticated: !!user,
+  isSystemAdmin: user?.roles?.includes('Super Administrator') || false,
+  isAdmin: user?.roles?.includes('Administrator') || false,
+  isStandardUser: user?.roles?.includes('Standard User') || false,
+  canManageUsers: user?.roles?.includes('Super Administrator') || 
+                   user?.roles?.includes('Administrator'),
+  canManageSystem: user?.roles?.includes('Super Administrator'),
+};
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
