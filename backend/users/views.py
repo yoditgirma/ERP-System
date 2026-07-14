@@ -9,7 +9,7 @@ from django.db.models import Q
 from accounts.models import Role, UserRole, AuditLog
 from accounts.serializers import UserSerializer
 from .serializers import UserCreateSerializer, UserUpdateSerializer, UserRoleSerializer
-from .permissions import IsSystemAdmin, IsAdminOrSuperAdmin
+from .permissions import IsAdminOrSuperAdmin
 
 User = get_user_model()
 
@@ -24,7 +24,7 @@ class UserListView(generics.ListCreateAPIView):
         return UserSerializer
     
     def get_queryset(self):
-        queryset = User.objects.filter(is_deleted=False)
+        queryset = User.objects.all()
         
         # Search functionality
         search = self.request.query_params.get('search', '')
@@ -53,19 +53,6 @@ class UserListView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save()
         
-        # Assign role if provided
-        role_id = self.request.data.get('role_id')
-        if role_id:
-            try:
-                role = Role.objects.get(id=role_id)
-                UserRole.objects.create(
-                    user=user,
-                    role=role,
-                    assigned_by=self.request.user
-                )
-            except Role.DoesNotExist:
-                pass
-        
         # Log audit
         AuditLog.objects.create(
             user=self.request.user,
@@ -81,7 +68,7 @@ class UserListView(generics.ListCreateAPIView):
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update, or delete a user"""
     permission_classes = [permissions.IsAuthenticated, IsAdminOrSuperAdmin]
-    queryset = User.objects.filter(is_deleted=False)
+    queryset = User.objects.all()
     
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
@@ -90,22 +77,6 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     
     def perform_update(self, serializer):
         user = serializer.save()
-        
-        # Update role if provided
-        role_id = self.request.data.get('role_id')
-        if role_id:
-            try:
-                role = Role.objects.get(id=role_id)
-                # Remove existing roles
-                UserRole.objects.filter(user=user).delete()
-                # Assign new role
-                UserRole.objects.create(
-                    user=user,
-                    role=role,
-                    assigned_by=self.request.user
-                )
-            except Role.DoesNotExist:
-                pass
         
         # Log audit
         AuditLog.objects.create(
@@ -120,8 +91,9 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
     
     def perform_destroy(self, instance):
-        # Soft delete instead of hard delete
-        instance.soft_delete(deleted_by=self.request.user)
+        # Soft delete
+        instance.is_active = False
+        instance.save()
         
         # Log audit
         AuditLog.objects.create(
@@ -141,7 +113,7 @@ class ActivateUserView(APIView):
     
     def post(self, request, user_id):
         try:
-            user = User.objects.get(id=user_id, is_deleted=False)
+            user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
@@ -151,18 +123,6 @@ class ActivateUserView(APIView):
         
         user.is_active = is_active
         user.save()
-        
-        # Log audit
-        AuditLog.objects.create(
-            user=request.user,
-            action='UPDATE',
-            model_name='User',
-            object_id=str(user.id),
-            object_repr=user.username,
-            changes={'is_active': is_active},
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')
-        )
         
         return Response({
             'message': f"User {'activated' if is_active else 'deactivated'} successfully",
@@ -176,7 +136,7 @@ class ResetPasswordView(APIView):
     
     def post(self, request, user_id):
         try:
-            user = User.objects.get(id=user_id, is_deleted=False)
+            user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
@@ -192,18 +152,6 @@ class ResetPasswordView(APIView):
         user.set_password(new_password)
         user.save()
         
-        # Log audit
-        AuditLog.objects.create(
-            user=request.user,
-            action='UPDATE',
-            model_name='User',
-            object_id=str(user.id),
-            object_repr=user.username,
-            changes={'password_reset': True},
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')
-        )
-        
         return Response({'message': 'Password reset successfully'})
 
 # ============ ASSIGN USER ROLE ============
@@ -213,7 +161,7 @@ class AssignRoleView(APIView):
     
     def post(self, request, user_id):
         try:
-            user = User.objects.get(id=user_id, is_deleted=False)
+            user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
@@ -232,18 +180,6 @@ class AssignRoleView(APIView):
             user=user,
             role=role,
             assigned_by=request.user
-        )
-        
-        # Log audit
-        AuditLog.objects.create(
-            user=request.user,
-            action='UPDATE',
-            model_name='UserRole',
-            object_id=str(user.id),
-            object_repr=f"{user.username} -> {role.name}",
-            changes={'role': role.name},
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')
         )
         
         return Response({

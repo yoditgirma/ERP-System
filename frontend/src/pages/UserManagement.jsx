@@ -76,29 +76,65 @@ const UserManagement = () => {
   });
 
   const handleCreateUser = async (e) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        username: formData.username,
-        email: formData.email,
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        phone: formData.phone,
-        password: formData.password,
-        role_id: formData.role_id,
-        is_active: formData.is_active,
-      };
-      
-      const response = await api.post('/users/', payload);
-      toast.success('User created successfully!');
-      setShowModal(false);
-      resetForm();
-      fetchUsers();
-    } catch (error) {
-      console.error('Error creating user:', error);
-      toast.error(error.response?.data?.message || 'Failed to create user');
+  e.preventDefault();
+  
+  // Validate required fields
+  if (!formData.username || !formData.email || !formData.first_name || !formData.last_name) {
+    toast.error('Please fill in all required fields');
+    return;
+  }
+  
+  if (!formData.password || formData.password.length < 8) {
+    toast.error('Password must be at least 8 characters');
+    return;
+  }
+  
+  try {
+    // Prepare payload - only send fields that exist
+    const payload = {
+      username: formData.username,
+      email: formData.email,
+      first_name: formData.first_name,
+      last_name: formData.last_name,
+      phone: formData.phone || '',
+      password: formData.password,
+      is_active: formData.is_active,
+    };
+    
+    // Only add role_id if it has a value
+    if (formData.role_id && formData.role_id !== '') {
+      payload.role_id = formData.role_id;
     }
-  };
+    
+    console.log('Sending payload:', payload); // Debug: Check what's being sent
+    
+    const response = await api.post('/users/', payload);
+    
+    toast.success('User created successfully!');
+    setShowModal(false);
+    resetForm();
+    fetchUsers();
+    
+  } catch (error) {
+    console.error('Error creating user:', error);
+    
+    // Show detailed error message
+    if (error.response?.data) {
+      const errors = error.response.data;
+      console.log('Validation errors:', errors);
+      
+      // Display validation errors
+      if (typeof errors === 'object') {
+        const errorMessages = Object.values(errors).flat().join('\n');
+        toast.error(errorMessages || 'Failed to create user');
+      } else {
+        toast.error(errors.message || 'Failed to create user');
+      }
+    } else {
+      toast.error('Failed to create user. Please check the form and try again.');
+    }
+  }
+};
 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
@@ -444,22 +480,22 @@ const UserManagement = () => {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Role
-                  </label>
-                  <select
-                    value={formData.role_id}
-                    onChange={(e) => setFormData({...formData, role_id: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#33CC33] focus:border-transparent"
-                  >
-                    <option value="">Select Role</option>
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Role
+  </label>
+  <select
+    value={formData.role_id || ''}
+    onChange={(e) => setFormData({...formData, role_id: e.target.value})}
+    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#33CC33] focus:border-transparent"
+  >
+    <option value="">Select Role</option>
+    {roles.map((role) => (
+      <option key={role.id} value={role.id}>
+        {role.name}
+      </option>
+    ))}
+  </select>
+</div>
 
                 <div className="flex items-center">
                   <input
