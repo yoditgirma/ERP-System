@@ -186,22 +186,29 @@ const UserManagement = () => {
   };
 
   const handleResetPassword = async (userId) => {
-    const newPassword = prompt('Enter new password:');
-    if (!newPassword || newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters');
-      return;
+    // Ask for confirmation
+    if (!confirm('This will send a password reset link to the user\'s email. Continue?')) {
+        return;
     }
     
     try {
-      await api.post(`/users/${userId}/reset-password/`, {
-        new_password: newPassword
-      });
-      toast.success('Password reset successfully!');
+        // Call the admin reset endpoint
+        const response = await api.post('/auth/admin/reset-password/', {
+            user_id: userId
+        });
+        
+        toast.success(response.data.message || 'Password reset email sent successfully!');
+        
     } catch (error) {
-      console.error('Error resetting password:', error);
-      toast.error('Failed to reset password');
+        console.error('Error resetting password:', error);
+        
+        if (error.response?.data?.error) {
+            toast.error(error.response.data.error);
+        } else {
+            toast.error('Failed to send password reset email');
+        }
     }
-  };
+};
 
   const openCreateModal = () => {
     resetForm();
@@ -355,13 +362,13 @@ const UserManagement = () => {
                             <CheckCircleIcon className="h-5 w-5" />
                           )}
                         </button>
-                        <button
-                          onClick={() => handleResetPassword(user.id)}
-                          className="p-1 rounded hover:bg-gray-100 text-gray-500 transition-colors"
-                          title="Reset Password"
-                        >
-                          <KeyIcon className="h-5 w-5" />
-                        </button>
+                       <button
+    onClick={() => handleResetPassword(user.id)}
+    className="p-1 rounded hover:bg-gray-100 text-gray-500 transition-colors"
+    title="Send Password Reset Email"
+>
+    <KeyIcon className="h-5 w-5" />
+</button>
                         <button
                           onClick={() => openEditModal(user)}
                           className="p-1 rounded hover:bg-gray-100 text-blue-500 transition-colors"

@@ -1,3 +1,5 @@
+import secrets
+
 from rest_framework import status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -8,7 +10,10 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 import logging
 
-from .models import LoginHistory, Permission, Role
+from users.permissions import IsAdminOrSuperAdmin
+
+
+from .models import AuditLog, LoginHistory, Permission, Role
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, LoginSerializer,
     RoleSerializer, PermissionSerializer
@@ -181,3 +186,196 @@ class ChangePasswordView(APIView):
         return Response({
             'message': 'Password changed successfully'
         })
+    
+
+# backend/accounts/views.py
+# Add these new views
+
+from .models import PasswordResetToken
+from .services.email_service import EmailService
+from datetime import timedelta
+from django.utils import timezone
+
+class AdminInitiateResetView(APIView):
+    """
+    View for admin to initiate password reset for a user
+    URL: POST /api/auth/admin/reset-password/
+    """
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrSuperAdmin]
+    
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        
+        if not user_id:
+            return Response(
+                {'error': 'user_id is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if admin can reset this user's password
+        if not request.user.is_superuser:
+            # Admin cannot reset Super Admin passwords
+            user_roles = user.user_roles.all()
+            if any(ur.role.name == 'Super Administrator' for ur in user_roles):
+                return Response(
+                    {'error': 'Cannot reset password for Super Administrator'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        # Delete any existing valid tokens for this user
+        PasswordResetToken.objects.filter(
+            user=user,
+            used=False,
+            expires_at__gt=timezone.now()
+        ).update(used=True)
+        
+        # Generate new token
+        token = secrets.token_urlsafe(32)
+        expires_at = timezone.now() + timedelta(hours=24)
+        
+        reset_token = PasswordResetToken.objects.create(
+            user=user,
+            token=token,
+            expires_at=expires_at,
+            reset_type='admin_initiated'
+        )
+        
+        # Send email
+        try:
+            EmailService.send_password_reset_email(user, reset_token, 'admin_initiated')
+            
+            # Log audit
+            AuditLog.objects.create(
+                user=request.user,
+                action='UPDATE',
+                model_name='User',
+                object_id=str(user.id),
+                object_repr=user.username,
+                changes={'password_reset_initiated': True},
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            return Response({
+                'message': f'Password reset email sent to {user.email}',
+                'user': user.username,
+                'email': user.email
+            })
+            
+        except Exception as e:
+            reset_token.delete()
+            return Response({
+                'error': f'Failed to send email: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ResetPasswordConfirmView(APIView):
+    """
+    View for user to confirm password reset with token
+    URL: POST /api/auth/reset-password/confirm/
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        token = request.data.get('token')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+        
+        if not token or not new_password or not confirm_password:
+            return Response(
+                {'error': 'token, new_password, and confirm_password are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if new_password != confirm_password:
+            return Response(
+                {'error': 'Passwords do not match'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            reset_token = PasswordResetToken.objects.get(token=token)
+        except PasswordResetToken.DoesNotExist:
+            return Response(
+                {'error': 'Invalid or expired token'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if token is valid
+        if not reset_token.is_valid():
+            return Response(
+                {'error': 'Token has expired or already been used'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate password
+        try:
+            validate_password(new_password, reset_token.user)
+        except ValidationError as e:
+            return Response(
+                {'error': e.messages},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Set new password
+        reset_token.user.set_password(new_password)
+        reset_token.user.save()
+        
+        # Mark token as used
+        reset_token.used = True
+        reset_token.save()
+        
+        # Send notification email
+        try:
+            EmailService.send_password_changed_notification(reset_token.user)
+        except Exception as e:
+            print(f"Failed to send notification email: {e}")
+        
+        return Response({
+            'message': 'Password reset successfully. Please login with your new password.'
+        })
+
+class ValidateResetTokenView(APIView):
+    """
+    View to validate reset token
+    URL: GET /api/auth/reset-password/validate/?token=xxx
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request):
+        token = request.query_params.get('token')
+        
+        if not token:
+            return Response(
+                {'error': 'Token is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            reset_token = PasswordResetToken.objects.get(token=token)
+            
+            if reset_token.is_valid():
+                return Response({
+                    'valid': True,
+                    'user': reset_token.user.username,
+                    'email': reset_token.user.email,
+                    'expires_at': reset_token.expires_at
+                })
+            else:
+                return Response({
+                    'valid': False,
+                    'message': 'Token has expired or already been used'
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except PasswordResetToken.DoesNotExist:
+            return Response({
+                'valid': False,
+                'message': 'Invalid token'
+            }, status=status.HTTP_400_BAD_REQUEST)

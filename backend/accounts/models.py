@@ -227,3 +227,29 @@ class SystemSetting(models.Model):
         db_table = 'system_settings'
         verbose_name = 'System Setting'
         verbose_name_plural = 'System Settings'
+
+
+class PasswordResetToken(models.Model):
+    """Model for storing password reset tokens"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
+    token = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used = models.BooleanField(default=False)
+    reset_type = models.CharField(max_length=20, default='admin_initiated')  # admin_initiated or user_initiated
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.created_at}"
+    
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+    
+    def is_valid(self):
+        return not self.used and not self.is_expired()
+    
+    class Meta:
+        db_table = 'password_reset_tokens'
+        verbose_name = 'Password Reset Token'
+        verbose_name_plural = 'Password Reset Tokens'
+        ordering = ['-created_at']

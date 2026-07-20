@@ -16,4 +16,11 @@ urlpatterns = [
     # Roles & Permissions
     path('roles/', views.RoleListView.as_view(), name='role-list'),
     path('permissions/', views.PermissionListView.as_view(), name='permission-list'),
+
+     path('admin/reset-password/', views.AdminInitiateResetView.as_view(), name='admin-reset-password'),
+    
+    # Password Reset (User Confirmation)
+    path('reset-password/validate/', views.ValidateResetTokenView.as_view(), name='validate-reset-token'),
+    path('reset-password/confirm/', views.ResetPasswordConfirmView.as_view(), name='reset-password-confirm'),
+
 ]
