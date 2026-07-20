@@ -1,4 +1,3 @@
-// frontend/src/pages/UserManagement.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -9,13 +8,13 @@ import {
   TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
-  KeyIcon,
   UserIcon,
+  KeyIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 const UserManagement = () => {
-  const { user, isSystemAdmin, isAdministrator, canManageUsers } = useAuth();
+  const { user, isSystemAdmin, isAdministrator, canManageUsers } = useAuth(); // Updated
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,6 +58,7 @@ const UserManagement = () => {
       setRoles(response.data);
     } catch (error) {
       console.error('Error fetching roles:', error);
+      toast.error('Failed to load roles');
     }
   };
 
@@ -68,13 +68,12 @@ const UserManagement = () => {
 
   const filteredUsers = users.filter((user) => {
     const search = searchTerm.toLowerCase();
-    const matchesSearch = (
+    const matchesSearch = 
       user.username.toLowerCase().includes(search) ||
       user.email.toLowerCase().includes(search) ||
       (user.first_name && user.first_name.toLowerCase().includes(search)) ||
-      (user.last_name && user.last_name.toLowerCase().includes(search))
-    );
-    
+      (user.last_name && user.last_name.toLowerCase().includes(search));
+
     // Filter by status
     if (filterStatus === 'active') {
       return matchesSearch && user.is_active;
@@ -98,7 +97,7 @@ const UserManagement = () => {
         is_active: formData.is_active,
       };
       
-      await api.post('/users/', payload);
+      const response = await api.post('/users/', payload);
       toast.success('User created successfully!');
       setShowModal(false);
       resetForm();
@@ -120,7 +119,6 @@ const UserManagement = () => {
         is_active: formData.is_active,
         role_id: formData.role_id,
       };
-      
       await api.put(`/users/${editingUser.id}/`, payload);
       toast.success('User updated successfully!');
       setShowModal(false);
@@ -134,7 +132,6 @@ const UserManagement = () => {
 
   const handleDeleteUser = async (userId) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
-    
     try {
       await api.delete(`/users/${userId}/`);
       toast.success('User deleted successfully!');
@@ -147,8 +144,8 @@ const UserManagement = () => {
 
   const handleToggleStatus = async (userId, currentStatus) => {
     try {
-      await api.post(`/users/${userId}/activate/`, {
-        is_active: !currentStatus
+      await api.post(`/users/${userId}/activate/`, { 
+        is_active: !currentStatus 
       });
       toast.success(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully!`);
       fetchUsers();
@@ -159,6 +156,21 @@ const UserManagement = () => {
   };
 
   const handleResetPassword = async (userId) => {
+<<<<<<< HEAD
+    // Ask for confirmation
+    if (!confirm('This will send a password reset link to the user\'s email. Continue?')) {
+        return;
+    }
+    
+    try {
+        // Call the admin reset endpoint
+        const response = await api.post('/auth/admin/reset-password/', {
+            user_id: userId
+        });
+        
+        toast.success(response.data.message || 'Password reset email sent successfully!');
+        
+=======
     const newPassword = prompt('Enter new password (min 8 characters):');
     if (!newPassword) return;
     if (newPassword.length < 8) {
@@ -172,9 +184,15 @@ const UserManagement = () => {
       });
       toast.success('Password reset successfully!');
       fetchUsers();
+>>>>>>> a9e4883 (Updated user management)
     } catch (error) {
-      console.error('Error resetting password:', error);
-      toast.error('Failed to reset password');
+        console.error('Error resetting password:', error);
+        
+        if (error.response?.data?.error) {
+            toast.error(error.response.data.error);
+        } else {
+            toast.error('Failed to send password reset email');
+        }
     }
   };
 
@@ -211,7 +229,7 @@ const UserManagement = () => {
     });
   };
 
-  // ============ PERMISSION CHECK ============
+  // ============ UPDATED PERMISSION CHECK ============
   // Allow access to both System Admin AND Administrator
   if (!isSystemAdmin && !isAdministrator && !canManageUsers) {
     return (
@@ -225,26 +243,23 @@ const UserManagement = () => {
   }
 
   return (
-    <div>
+    <div className="p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-500 mt-1">Manage system users and their roles</p>
-        </div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
         <button
           onClick={openCreateModal}
-          className="flex items-center px-4 py-2 bg-[#33CC33] text-white rounded-xl hover:bg-[#2db82d] transition-colors"
+          className="px-4 py-2 bg-[#33CC33] text-white rounded-lg hover:bg-[#2db82d] transition-colors flex items-center space-x-2"
         >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Add User
+          <PlusIcon className="h-5 w-5" />
+          <span>Add User</span>
         </button>
       </div>
 
       {/* Search and Filter */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <input
             type="text"
             placeholder="Search users by name, email, or username..."
@@ -297,7 +312,7 @@ const UserManagement = () => {
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                        <div className="shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
                           <span className="text-gray-600 font-medium">
                             {user.first_name?.charAt(0) || user.username.charAt(0).toUpperCase()}
                             {user.last_name?.charAt(0) || ''}
@@ -341,13 +356,13 @@ const UserManagement = () => {
                             <CheckCircleIcon className="h-5 w-5" />
                           )}
                         </button>
-                        <button
-                          onClick={() => handleResetPassword(user.id)}
-                          className="p-1 rounded hover:bg-gray-100 text-gray-500 transition-colors"
-                          title="Reset Password"
-                        >
-                          <KeyIcon className="h-5 w-5" />
-                        </button>
+                       <button
+    onClick={() => handleResetPassword(user.id)}
+    className="p-1 rounded hover:bg-gray-100 text-gray-500 transition-colors"
+    title="Send Password Reset Email"
+>
+    <KeyIcon className="h-5 w-5" />
+</button>
                         <button
                           onClick={() => openEditModal(user)}
                           className="p-1 rounded hover:bg-gray-100 text-blue-500 transition-colors"
@@ -379,7 +394,6 @@ const UserManagement = () => {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               {editingUser ? 'Edit User' : 'Create New User'}
             </h2>
-            
             <form onSubmit={editingUser ? handleUpdateUser : handleCreateUser}>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -408,7 +422,6 @@ const UserManagement = () => {
                     />
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Username*
@@ -422,7 +435,6 @@ const UserManagement = () => {
                     disabled={!!editingUser}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email*
@@ -435,7 +447,6 @@ const UserManagement = () => {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Phone
@@ -447,7 +458,6 @@ const UserManagement = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#33CC33] focus:border-transparent"
                   />
                 </div>
-
                 {!editingUser && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -464,7 +474,6 @@ const UserManagement = () => {
                     <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
                   </div>
                 )}
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Role
@@ -482,7 +491,6 @@ const UserManagement = () => {
                     ))}
                   </select>
                 </div>
-
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -495,7 +503,6 @@ const UserManagement = () => {
                   </label>
                 </div>
               </div>
-
               <div className="mt-6 flex justify-end space-x-3">
                 <button
                   type="button"
