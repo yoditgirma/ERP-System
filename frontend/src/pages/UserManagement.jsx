@@ -142,23 +142,9 @@ const UserManagement = () => {
     }
   };
 
-  const handleToggleStatus = async (userId, currentStatus) => {
-    try {
-      await api.post(`/users/${userId}/activate/`, { 
-        is_active: !currentStatus 
-      });
-      toast.success(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully!`);
-      fetchUsers();
-    } catch (error) {
-      console.error('Error toggling status:', error);
-      toast.error('Failed to update user status');
-    }
-  };
-
-  const handleResetPassword = async (userId) => {
-<<<<<<< HEAD
+    const handleResetPassword = async (userId) => {
     // Ask for confirmation
-    if (!confirm('This will send a password reset link to the user\'s email. Continue?')) {
+    if (!confirm("This will send a password reset link to the user's email. Continue?")) {
         return;
     }
     
@@ -169,8 +155,16 @@ const UserManagement = () => {
         });
         
         toast.success(response.data.message || 'Password reset email sent successfully!');
-        
-=======
+    } catch (error) {
+        console.error('Error sending reset link:', error);
+        if (error.response?.data?.error) {
+            toast.error(error.response.data.error);
+        } else {
+            toast.error('Failed to send password reset email');
+        }
+    }
+
+    // Optional manual override if you still want to set it directly right after
     const newPassword = prompt('Enter new password (min 8 characters):');
     if (!newPassword) return;
     if (newPassword.length < 8) {
@@ -184,14 +178,12 @@ const UserManagement = () => {
       });
       toast.success('Password reset successfully!');
       fetchUsers();
->>>>>>> a9e4883 (Updated user management)
     } catch (error) {
-        console.error('Error resetting password:', error);
-        
+        console.error('Error setting new password:', error);
         if (error.response?.data?.error) {
             toast.error(error.response.data.error);
         } else {
-            toast.error('Failed to send password reset email');
+            toast.error('Failed to update password');
         }
     }
   };
