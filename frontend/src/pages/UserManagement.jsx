@@ -15,7 +15,7 @@ import {
 import toast from 'react-hot-toast';
 
 const UserManagement = () => {
-  const { user, isSystemAdmin } = useAuth();
+  const { user, isSystemAdmin, isAdministrator, canManageUsers } = useAuth(); // Updated
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +32,7 @@ const UserManagement = () => {
     is_active: true,
   });
   const [roles, setRoles] = useState([]);
+  const [filterStatus, setFilterStatus] = useState('all');
 
   // Fetch users and roles on load
   useEffect(() => {
@@ -67,74 +68,46 @@ const UserManagement = () => {
 
   const filteredUsers = users.filter((user) => {
     const search = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       user.username.toLowerCase().includes(search) ||
       user.email.toLowerCase().includes(search) ||
       (user.first_name && user.first_name.toLowerCase().includes(search)) ||
       (user.last_name && user.last_name.toLowerCase().includes(search))
     );
+    
+    // Filter by status
+    if (filterStatus === 'active') {
+      return matchesSearch && user.is_active;
+    } else if (filterStatus === 'inactive') {
+      return matchesSearch && !user.is_active;
+    }
+    return matchesSearch;
   });
 
   const handleCreateUser = async (e) => {
-  e.preventDefault();
-  
-  // Validate required fields
-  if (!formData.username || !formData.email || !formData.first_name || !formData.last_name) {
-    toast.error('Please fill in all required fields');
-    return;
-  }
-  
-  if (!formData.password || formData.password.length < 8) {
-    toast.error('Password must be at least 8 characters');
-    return;
-  }
-  
-  try {
-    // Prepare payload - only send fields that exist
-    const payload = {
-      username: formData.username,
-      email: formData.email,
-      first_name: formData.first_name,
-      last_name: formData.last_name,
-      phone: formData.phone || '',
-      password: formData.password,
-      is_active: formData.is_active,
-    };
-    
-    // Only add role_id if it has a value
-    if (formData.role_id && formData.role_id !== '') {
-      payload.role_id = formData.role_id;
-    }
-    
-    console.log('Sending payload:', payload); // Debug: Check what's being sent
-    
-    const response = await api.post('/users/', payload);
-    
-    toast.success('User created successfully!');
-    setShowModal(false);
-    resetForm();
-    fetchUsers();
-    
-  } catch (error) {
-    console.error('Error creating user:', error);
-    
-    // Show detailed error message
-    if (error.response?.data) {
-      const errors = error.response.data;
-      console.log('Validation errors:', errors);
+    e.preventDefault();
+    try {
+      const payload = {
+        username: formData.username,
+        email: formData.email,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone: formData.phone,
+        password: formData.password,
+        role_id: formData.role_id,
+        is_active: formData.is_active,
+      };
       
-      // Display validation errors
-      if (typeof errors === 'object') {
-        const errorMessages = Object.values(errors).flat().join('\n');
-        toast.error(errorMessages || 'Failed to create user');
-      } else {
-        toast.error(errors.message || 'Failed to create user');
-      }
-    } else {
-      toast.error('Failed to create user. Please check the form and try again.');
+      const response = await api.post('/users/', payload);
+      toast.success('User created successfully!');
+      setShowModal(false);
+      resetForm();
+      fetchUsers();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error(error.response?.data?.error || 'Failed to create user');
     }
-  }
-};
+  };
 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
@@ -186,6 +159,7 @@ const UserManagement = () => {
   };
 
   const handleResetPassword = async (userId) => {
+<<<<<<< HEAD
     // Ask for confirmation
     if (!confirm('This will send a password reset link to the user\'s email. Continue?')) {
         return;
@@ -199,6 +173,21 @@ const UserManagement = () => {
         
         toast.success(response.data.message || 'Password reset email sent successfully!');
         
+=======
+    const newPassword = prompt('Enter new password (min 8 characters):');
+    if (!newPassword) return;
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+    
+    try {
+      await api.post(`/users/${userId}/reset-password/`, {
+        new_password: newPassword
+      });
+      toast.success('Password reset successfully!');
+      fetchUsers();
+>>>>>>> a9e4883 (Updated user management)
     } catch (error) {
         console.error('Error resetting password:', error);
         
@@ -243,13 +232,15 @@ const UserManagement = () => {
     });
   };
 
-  // Only Super Admins and Admins can access this page
-  if (!isSystemAdmin && !user?.isAdmin) {
+  // ============ UPDATED PERMISSION CHECK ============
+  // Allow access to both System Admin AND Administrator
+  if (!isSystemAdmin && !isAdministrator && !canManageUsers) {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-        <div className="text-4xl mb-4">🔒</div>
+        <div className="text-6xl mb-4">🔒</div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
         <p className="text-gray-600">You don't have permission to access this page.</p>
+        <p className="text-sm text-gray-400 mt-2">Required: Administrator or Super Administrator role</p>
       </div>
     );
   }
@@ -271,9 +262,9 @@ const UserManagement = () => {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative">
+      {/* Search and Filter */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
           <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
@@ -283,6 +274,15 @@ const UserManagement = () => {
             className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#33CC33] focus:border-transparent"
           />
         </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#33CC33] focus:border-transparent bg-white"
+        >
+          <option value="all">All Users</option>
+          <option value="active">Active Only</option>
+          <option value="inactive">Inactive Only</option>
+        </select>
       </div>
 
       {/* Users Table */}
@@ -318,7 +318,7 @@ const UserManagement = () => {
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
                           <span className="text-gray-600 font-medium">
                             {user.first_name?.charAt(0) || user.username.charAt(0).toUpperCase()}
                             {user.last_name?.charAt(0) || ''}
@@ -487,22 +487,22 @@ const UserManagement = () => {
                 )}
 
                 <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Role
-  </label>
-  <select
-    value={formData.role_id || ''}
-    onChange={(e) => setFormData({...formData, role_id: e.target.value})}
-    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#33CC33] focus:border-transparent"
-  >
-    <option value="">Select Role</option>
-    {roles.map((role) => (
-      <option key={role.id} value={role.id}>
-        {role.name}
-      </option>
-    ))}
-  </select>
-</div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role
+                  </label>
+                  <select
+                    value={formData.role_id}
+                    onChange={(e) => setFormData({...formData, role_id: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#33CC33] focus:border-transparent"
+                  >
+                    <option value="">Select Role</option>
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="flex items-center">
                   <input

@@ -1,7 +1,9 @@
+// frontend/src/contexts/AuthContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../services/api';
+import toast from 'react-hot-toast';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -16,112 +18,88 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Load user from localStorage on mount
   useEffect(() => {
-    // Check if user is authenticated on mount
     const token = localStorage.getItem('access_token');
-    if (token) {
-      fetchUserProfile();
-    } else {
-      setLoading(false);
+    const userData = localStorage.getItem('user');
+    
+    if (token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+        localStorage.removeItem('user');
+        localStorage.removeItem('access_token');
+      }
     }
+    setLoading(false);
   }, []);
-
-  const fetchUserProfile = async () => {
-    try {
-      const response = await api.get('/auth/profile/');
-      setUser(response.data);
-    } catch (err) {
-      console.error('Failed to fetch user profile:', err);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const login = async (username, password) => {
     try {
+      setLoading(true);
       setError(null);
-      const response = await api.post('/auth/login/', { username, password });
       
+      const response = await api.post('/auth/login/', { username, password });
       const { access, refresh, user } = response.data;
+      
+      // Store tokens
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      // Set Authorization header
+      api.defaults.headers.common['Authorization'] = `Bearer ${access}`;
+      
       setUser(user);
+      toast.success(`Welcome back, ${user.full_name || user.username}!`);
       
       return { success: true, user };
-    } catch (err) {
-      const errorMessage = err.response?.data?.error || 'Login failed';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    }
-  };
-
-  const register = async (userData) => {
-    try {
-      setError(null);
-      const response = await api.post('/auth/register/', userData);
-      return { success: true, data: response.data };
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Registration failed';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    }
-  };
-
-  const logout = async () => {
-    try {
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
-        await api.post('/auth/logout/', { refresh: refreshToken });
-      }
-    } catch (err) {
-      console.error('Logout error:', err);
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || 'Login failed. Please try again.';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return { success: false, error: errorMsg };
     } finally {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      setUser(null);
+      setLoading(false);
     }
   };
 
-  const updateProfile = async (data) => {
-    try {
-      const response = await api.put('/auth/profile/', data);
-      setUser(response.data);
-      return { success: true, data: response.data };
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Profile update failed';
-      return { success: false, error: errorMessage };
-    }
-  };
-
-  const changePassword = async (oldPassword, newPassword) => {
-    try {
-      await api.post('/auth/change-password/', {
-        old_password: oldPassword,
-        new_password: newPassword,
-      });
-      return { success: true };
-    } catch (err) {
-      const errorMessage = err.response?.data?.error || 'Password change failed';
-      return { success: false, error: errorMessage };
-    }
+  const logout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    delete api.defaults.headers.common['Authorization'];
+    setUser(null);
+    toast.success('Logged out successfully');
   };
 
   const value = {
-  user,
-  loading,
-  error,
-  login,
-  logout,
-  isAuthenticated: !!user,
-  isSystemAdmin: user?.roles?.includes('Super Administrator') || false,
-  isAdmin: user?.roles?.includes('Administrator') || false,
-  isStandardUser: user?.roles?.includes('Standard User') || false,
-  canManageUsers: user?.roles?.includes('Super Administrator') || 
-                   user?.roles?.includes('Administrator'),
-  canManageSystem: user?.roles?.includes('Super Administrator'),
-};
+    user,
+    loading,
+    error,
+    login,
+    logout,
+    isAuthenticated: !!user,
+    
+    // ============ ROLE CHECK FUNCTIONS ============
+    isSystemAdmin: user?.roles?.includes('Super Administrator') || false,
+    isAdministrator: user?.roles?.includes('Administrator') || false,
+    isStandardUser: user?.roles?.includes('Standard User') || false,
+    
+    // Combined checks
+    canManageUsers: user?.roles?.some(role => 
+      ['Super Administrator', 'Administrator'].includes(role)
+    ) || false,
+    
+    canManageSystem: user?.roles?.includes('Super Administrator') || false,
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
