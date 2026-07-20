@@ -9,13 +9,13 @@ import {
   TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
-  UserIcon,
   KeyIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 const UserManagement = () => {
-  const { user, isSystemAdmin, isAdministrator, canManageUsers } = useAuth(); // Updated
+  const { user, isSystemAdmin, isAdministrator, canManageUsers } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,7 +98,7 @@ const UserManagement = () => {
         is_active: formData.is_active,
       };
       
-      const response = await api.post('/users/', payload);
+      await api.post('/users/', payload);
       toast.success('User created successfully!');
       setShowModal(false);
       resetForm();
@@ -159,21 +159,6 @@ const UserManagement = () => {
   };
 
   const handleResetPassword = async (userId) => {
-<<<<<<< HEAD
-    // Ask for confirmation
-    if (!confirm('This will send a password reset link to the user\'s email. Continue?')) {
-        return;
-    }
-    
-    try {
-        // Call the admin reset endpoint
-        const response = await api.post('/auth/admin/reset-password/', {
-            user_id: userId
-        });
-        
-        toast.success(response.data.message || 'Password reset email sent successfully!');
-        
-=======
     const newPassword = prompt('Enter new password (min 8 characters):');
     if (!newPassword) return;
     if (newPassword.length < 8) {
@@ -187,17 +172,11 @@ const UserManagement = () => {
       });
       toast.success('Password reset successfully!');
       fetchUsers();
->>>>>>> a9e4883 (Updated user management)
     } catch (error) {
-        console.error('Error resetting password:', error);
-        
-        if (error.response?.data?.error) {
-            toast.error(error.response.data.error);
-        } else {
-            toast.error('Failed to send password reset email');
-        }
+      console.error('Error resetting password:', error);
+      toast.error('Failed to reset password');
     }
-};
+  };
 
   const openCreateModal = () => {
     resetForm();
@@ -232,7 +211,7 @@ const UserManagement = () => {
     });
   };
 
-  // ============ UPDATED PERMISSION CHECK ============
+  // ============ PERMISSION CHECK ============
   // Allow access to both System Admin AND Administrator
   if (!isSystemAdmin && !isAdministrator && !canManageUsers) {
     return (
@@ -362,13 +341,13 @@ const UserManagement = () => {
                             <CheckCircleIcon className="h-5 w-5" />
                           )}
                         </button>
-                       <button
-    onClick={() => handleResetPassword(user.id)}
-    className="p-1 rounded hover:bg-gray-100 text-gray-500 transition-colors"
-    title="Send Password Reset Email"
->
-    <KeyIcon className="h-5 w-5" />
-</button>
+                        <button
+                          onClick={() => handleResetPassword(user.id)}
+                          className="p-1 rounded hover:bg-gray-100 text-gray-500 transition-colors"
+                          title="Reset Password"
+                        >
+                          <KeyIcon className="h-5 w-5" />
+                        </button>
                         <button
                           onClick={() => openEditModal(user)}
                           className="p-1 rounded hover:bg-gray-100 text-blue-500 transition-colors"
