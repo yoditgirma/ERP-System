@@ -14,7 +14,7 @@ import {
 import toast from 'react-hot-toast';
 
 const UserManagement = () => {
-  const { user, isSystemAdmin, isAdministrator, canManageUsers } = useAuth(); // Updated
+  const { user, isSystemAdmin, isAdministrator, canManageUsers } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -97,7 +97,7 @@ const UserManagement = () => {
         is_active: formData.is_active,
       };
       
-      const response = await api.post('/users/', payload);
+      await api.post('/users/', payload);
       toast.success('User created successfully!');
       setShowModal(false);
       resetForm();
@@ -142,14 +142,28 @@ const UserManagement = () => {
     }
   };
 
-    const handleResetPassword = async (userId) => {
-    // Ask for confirmation
+  // ============ FIXED: TOGGLE STATUS FUNCTION ============
+  const handleToggleStatus = async (userId, currentStatus) => {
+    try {
+      await api.post(`/users/${userId}/activate/`, {
+        is_active: !currentStatus
+      });
+      toast.success(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully!`);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      toast.error('Failed to update user status');
+    }
+  };
+
+  // ============ FIXED: RESET PASSWORD (ONLY EMAIL) ============
+  const handleResetPassword = async (userId) => {
+    // Only show email confirmation - NO manual password input
     if (!confirm("This will send a password reset link to the user's email. Continue?")) {
         return;
     }
     
     try {
-        // Call the admin reset endpoint
         const response = await api.post('/auth/admin/reset-password/', {
             user_id: userId
         });
@@ -161,29 +175,6 @@ const UserManagement = () => {
             toast.error(error.response.data.error);
         } else {
             toast.error('Failed to send password reset email');
-        }
-    }
-
-    // Optional manual override if you still want to set it directly right after
-    const newPassword = prompt('Enter new password (min 8 characters):');
-    if (!newPassword) return;
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters');
-      return;
-    }
-    
-    try {
-      await api.post(`/users/${userId}/reset-password/`, {
-        new_password: newPassword
-      });
-      toast.success('Password reset successfully!');
-      fetchUsers();
-    } catch (error) {
-        console.error('Error setting new password:', error);
-        if (error.response?.data?.error) {
-            toast.error(error.response.data.error);
-        } else {
-            toast.error('Failed to update password');
         }
     }
   };
@@ -221,8 +212,7 @@ const UserManagement = () => {
     });
   };
 
-  // ============ UPDATED PERMISSION CHECK ============
-  // Allow access to both System Admin AND Administrator
+  // Permission check
   if (!isSystemAdmin && !isAdministrator && !canManageUsers) {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
@@ -335,6 +325,7 @@ const UserManagement = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
+                        {/* Toggle Status Button */}
                         <button
                           onClick={() => handleToggleStatus(user.id, user.is_active)}
                           className={`p-1 rounded hover:bg-gray-100 transition-colors ${
@@ -348,13 +339,17 @@ const UserManagement = () => {
                             <CheckCircleIcon className="h-5 w-5" />
                           )}
                         </button>
-                       <button
-    onClick={() => handleResetPassword(user.id)}
-    className="p-1 rounded hover:bg-gray-100 text-gray-500 transition-colors"
-    title="Send Password Reset Email"
->
-    <KeyIcon className="h-5 w-5" />
-</button>
+                        
+                        {/* Reset Password Button */}
+                        <button
+                          onClick={() => handleResetPassword(user.id)}
+                          className="p-1 rounded hover:bg-gray-100 text-gray-500 transition-colors"
+                          title="Send Password Reset Email"
+                        >
+                          <KeyIcon className="h-5 w-5" />
+                        </button>
+                        
+                        {/* Edit Button */}
                         <button
                           onClick={() => openEditModal(user)}
                           className="p-1 rounded hover:bg-gray-100 text-blue-500 transition-colors"
@@ -362,6 +357,8 @@ const UserManagement = () => {
                         >
                           <PencilIcon className="h-5 w-5" />
                         </button>
+                        
+                        {/* Delete Button */}
                         <button
                           onClick={() => handleDeleteUser(user.id)}
                           className="p-1 rounded hover:bg-gray-100 text-red-500 transition-colors"
