@@ -10,6 +10,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 import logging
 
+from .serializers import ProfileUpdateSerializer, ChangePasswordSerializer
+
 from users.permissions import IsAdminOrSuperAdmin
 
 
@@ -155,32 +157,23 @@ class PermissionListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
 class ChangePasswordView(APIView):
+    """Change user password"""
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request):
-        old_password = request.data.get('old_password')
-        new_password = request.data.get('new_password')
-        
-        if not old_password or not new_password:
-            return Response({
-                'error': 'Both old_password and new_password are required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         
         user = request.user
         
-        if not user.check_password(old_password):
+        # Check old password
+        if not user.check_password(serializer.validated_data['old_password']):
             return Response({
-                'error': 'Current password is incorrect'
+                'old_password': 'Current password is incorrect'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        try:
-            validate_password(new_password, user)
-        except ValidationError as e:
-            return Response({
-                'error': e.messages
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        user.set_password(new_password)
+        # Set new password
+        user.set_password(serializer.validated_data['new_password'])
         user.save()
         
         return Response({
@@ -379,3 +372,53 @@ class ValidateResetTokenView(APIView):
                 'valid': False,
                 'message': 'Invalid token'
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProfileUpdateView(generics.UpdateAPIView):
+    """Update user profile"""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ProfileUpdateSerializer
+    
+    def get_object(self):
+        return self.request.user
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response({
+            'message': 'Profile updated successfully',
+            'user': UserSerializer(instance).data
+        })
+
+
+class UploadProfilePictureView(APIView):
+    """Upload profile picture"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        user = request.user
+        profile_picture = request.FILES.get('profile_picture')
+        
+        if not profile_picture:
+            return Response({
+                'error': 'No image provided'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate image
+        if profile_picture.size > 5 * 1024 * 1024:  # 5MB limit
+            return Response({
+                'error': 'Image too large. Max 5MB allowed.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Save profile picture
+        user.profile_picture = profile_picture
+        user.save()
+        
+        return Response({
+            'message': 'Profile picture updated successfully',
+            'profile_picture': user.profile_picture.url if user.profile_picture else None
+        })

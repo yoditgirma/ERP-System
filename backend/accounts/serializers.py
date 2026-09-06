@@ -16,13 +16,14 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name', 
                  'phone', 'profile_picture', 'is_active', 'is_staff', 'is_superuser',
                  'last_login', 'date_joined', 'updated_at', 'roles']
-        read_only_fields = ['id', 'last_login', 'date_joined', 'updated_at']
+        read_only_fields = ['id' ,'username', 'last_login', 'date_joined', 'updated_at']
     
     def get_full_name(self, obj):
         return obj.full_name
     
     def get_roles(self, obj):
-        return [ur.role.name for ur in obj.user_roles.all()]
+        user_roles = UserRole.objects.filter(user=obj).select_related('role')
+        return [ur.role.name for ur in user_roles]
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -81,3 +82,26 @@ class UserRoleSerializer(serializers.ModelSerializer):
         model = UserRole
         fields = ['id', 'user', 'role', 'assigned_at', 'assigned_by']
         read_only_fields = ['id', 'assigned_at']
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating user profile"""
+    
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'phone', 'profile_picture']
+    
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exclude(id=self.instance.id).exists():
+            raise serializers.ValidationError("Email already exists")
+        return value
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """Serializer for changing password"""
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, validators=[validate_password])
+    confirm_password = serializers.CharField(required=True)
+    
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match"})
+        return attrs

@@ -100,62 +100,6 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* ============ NEW: ADMIN CONTROLS SECTION ============ */}
-      {(isSystemAdmin || isAdministrator) && (
-        <div className="mb-8">
-          <div className="bg-gradient-to-r from-[#33CC33] to-green-600 rounded-2xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold">🔐 Admin Controls</h2>
-                <p className="text-green-100 mt-1">Manage users, roles, and system settings</p>
-              </div>
-              <ShieldCheckIcon className="h-12 w-12 text-white opacity-50" />
-            </div>
-            
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Link 
-                to="/users" 
-                className="bg-white/20 hover:bg-white/30 rounded-xl p-4 transition-all backdrop-blur-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <UserGroupIcon className="h-6 w-6" />
-                  <div>
-                    <p className="font-semibold">User Management</p>
-                    <p className="text-sm text-green-100">Manage all users</p>
-                  </div>
-                </div>
-              </Link>
-              
-              <Link 
-                to="/roles" 
-                className="bg-white/20 hover:bg-white/30 rounded-xl p-4 transition-all backdrop-blur-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <ShieldCheckIcon className="h-6 w-6" />
-                  <div>
-                    <p className="font-semibold">Roles & Permissions</p>
-                    <p className="text-sm text-green-100">Manage access control</p>
-                  </div>
-                </div>
-              </Link>
-              
-              <Link 
-                to="/settings" 
-                className="bg-white/20 hover:bg-white/30 rounded-xl p-4 transition-all backdrop-blur-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <Cog6ToothIcon className="h-6 w-6" />
-                  <div>
-                    <p className="font-semibold">System Settings</p>
-                    <p className="text-sm text-green-100">Configure system</p>
-                  </div>
-                </div>
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Stats Grid - 4 columns */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (

@@ -176,3 +176,8 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@erpsystem.com')
 # Frontend URL for password reset
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 PASSWORD_RESET_TIMEOUT = 86400
+
+
+# Media files (profile pictures, etc.)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

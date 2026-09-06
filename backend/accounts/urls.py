@@ -12,12 +12,14 @@ urlpatterns = [
     
     # User Profile
     path('profile/', views.UserProfileView.as_view(), name='profile'),
+    path('profile/update/', views.ProfileUpdateView.as_view(), name='profile-update'),
+    path('profile/upload-picture/', views.UploadProfilePictureView.as_view(), name='upload-picture'),
     
     # Roles & Permissions
     path('roles/', views.RoleListView.as_view(), name='role-list'),
     path('permissions/', views.PermissionListView.as_view(), name='permission-list'),
 
-     path('admin/reset-password/', views.AdminInitiateResetView.as_view(), name='admin-reset-password'),
+    path('admin/reset-password/', views.AdminInitiateResetView.as_view(), name='admin-reset-password'),
     
     # Password Reset (User Confirmation)
     path('reset-password/validate/', views.ValidateResetTokenView.as_view(), name='validate-reset-token'),
