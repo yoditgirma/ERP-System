@@ -67,6 +67,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const fetchUserProfile = async () => {
+  try {
+    const response = await api.get('/auth/profile/');
+    const userData = response.data;
+    
+    // Process profile picture URL
+    if (userData.profile_picture) {
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const cleanBase = baseURL.replace('/api', '');
+      userData.profile_picture_url = `${cleanBase}${userData.profile_picture}`;
+    }
+    
+    if (!userData.roles) {
+      userData.roles = [];
+    }
+    
+    setUser(userData);
+    return userData;
+  } catch (err) {
+    console.error('Failed to fetch user profile:', err);
+    throw err;
+  }
+};
+
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -77,25 +101,38 @@ export const AuthProvider = ({ children }) => {
   };
 
   const value = {
-    user,
-    loading,
-    error,
-    login,
-    logout,
-    isAuthenticated: !!user,
-    
-    // ============ ROLE CHECK FUNCTIONS ============
-    isSystemAdmin: user?.roles?.includes('Super Administrator') || false,
-    isAdministrator: user?.roles?.includes('Administrator') || false,
-    isStandardUser: user?.roles?.includes('Standard User') || false,
-    
-    // Combined checks
-    canManageUsers: user?.roles?.some(role => 
-      ['Super Administrator', 'Administrator'].includes(role)
-    ) || false,
-    
-    canManageSystem: user?.roles?.includes('Super Administrator') || false,
-  };
+  user,
+  loading,
+  error,
+  login,
+  logout,
+  fetchUserProfile, // ← Add this
+  updateProfile: async (data) => {
+    try {
+      const response = await api.put('/auth/profile/update/', data);
+      await fetchUserProfile(); // Refresh user data
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.error || 'Update failed' };
+    }
+  },
+  changePassword: async (oldPassword, newPassword) => {
+    try {
+      await api.post('/auth/change-password/', {
+        old_password: oldPassword,
+        new_password: newPassword,
+      });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.error || 'Password change failed' };
+    }
+  },
+  isAuthenticated: !!user,
+  isSystemAdmin: user?.roles?.includes('Super Administrator') || false,
+  isAdmin: user?.roles?.includes('Administrator') || false,
+  canManageUsers: user?.roles?.includes('Super Administrator') || 
+                   user?.roles?.includes('Administrator'),
+};
 
   return (
     <AuthContext.Provider value={value}>

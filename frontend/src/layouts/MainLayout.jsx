@@ -31,6 +31,14 @@ const MainLayout = () => {
     navigate('/login');
   };
 
+  const getImageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  if (imagePath.startsWith('http')) return imagePath;
+  const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const cleanBase = baseURL.replace('/api', '');
+  return `${cleanBase}${imagePath}`;
+};
+
   const isActive = (path) => {
     return location.pathname === path;
   };
@@ -54,9 +62,8 @@ const MainLayout = () => {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0b2544] shadow-lg transform transition-transform duration-300 ease-in-out ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0`}
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0b2544] shadow-lg transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:translate-x-0`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -74,9 +81,8 @@ const MainLayout = () => {
                 onClick={() => setSidebarOpen(false)}
               >
                 <item.icon
-                  className={`h-6 w-6 mr-3 ${
-                    isActive(item.href) ? 'text-green-500' : 'text-white'
-                  }`}
+                  className={`h-6 w-6 mr-3 ${isActive(item.href) ? 'text-green-500' : 'text-white'
+                    }`}
                 />
                 {item.name}
               </Link>
@@ -87,11 +93,29 @@ const MainLayout = () => {
           <div className="px-6 py-6">
             <div className="flex items-center space-x-3 mb-4">
               <div className="shrink-0">
-                <div className="h-12 w-12 rounded-full bg-green-400 flex items-center justify-center">
-                  <span className="text-green-900 font-bold">
-                    {user?.first_name?.charAt(0) || 'S'}
-                    {user?.last_name?.charAt(0) || 'A'}
-                  </span>
+                <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                  {user?.profile_picture ? (
+                    <img
+                      src={user.profile_picture_url || getImageUrl(user.profile_picture)}
+                      alt="Profile"
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        // If image fails to load, show initials
+                        e.target.style.display = 'none';
+                        const parent = e.target.parentElement;
+                        parent.innerHTML = `
+            <span class="text-gray-600 font-bold text-lg">
+              ${user?.first_name?.charAt(0) || 'S'}${user?.last_name?.charAt(0) || 'A'}
+            </span>
+          `;
+                      }}
+                    />
+                  ) : (
+                    <span className="text-gray-600 font-bold text-lg">
+                      {user?.first_name?.charAt(0) || 'S'}
+                      {user?.last_name?.charAt(0) || 'A'}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex-1 min-w-0">
